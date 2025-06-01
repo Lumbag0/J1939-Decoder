@@ -6,14 +6,17 @@ class J1939:
     def __init__(self, can_frame: str):
         self.can_frame = can_frame
         id_and_data = can_frame.split('#', 1)
-
+        
+        # Check if frame is valid
         if len(id_and_data) != 2:
             raise ValueError(f'ERROR: Invalid CAN Frame: {can_frame}')
         
         self.can_id, self.can_data = id_and_data
-
+        
+        # Convert the CAN ID to binary
         can_id_binary = self.__convert_id_to_binary()
     
+        # Parse through data and store into variables
         self.priority = int(can_id_binary[0:3], 2)
         self.reserved = int(can_id_binary[3], 2)
         self.data_page = int(can_id_binary[4], 2)
@@ -21,15 +24,22 @@ class J1939:
         self.pdu_specific = int(can_id_binary[13:21], 2)
         self.source_address = int(can_id_binary[21:29], 2)
 
+        # Calculate the PDU based off PDU Format
         if self.pdu_format < 240:
             self.pgn = (self.data_page << 16) + (self.pdu_format << 8) + self.pdu_specific
 
         else:
             self.pgn = (self.data_page << 16) + (self.pdu_format << 8)
 
+    # Description: Converts the CAN ID to binary and returns a string of that binary
+    # Parameters: N\A
+    # Returns: String
     def __convert_id_to_binary(self) -> str:
         return format(int(self.can_id, 16), '029b')
     
+    # Description: Prints a summary of the parsed CAN Frame
+    # Parameters: N\A
+    # Returns: N\A
     def summary(self):
         print(f'CAN Frame: {self.can_frame}')
         print(f'Source Address: {self.source_address} (0x{self.source_address:X})')
@@ -43,8 +53,13 @@ class J1939:
         print('-' * 40)
         print()
 
+# Description: Parses the J1939 Log file for CAN IDs and Parses each Frame
+# Parameters: File Path to log file
+# Returns: List of J1939 Objects
 def parse_file(file_path:str) -> List[J1939]:
     frames = []
+
+    # Open the file in read mode and parse each line
     try:
         with open(file_path, 'r') as file:
             for line in file:
@@ -60,6 +75,7 @@ def parse_file(file_path:str) -> List[J1939]:
     
     return frames
 
+# DescriptionL Using argparse, create a description and add the arguments 
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Parse J1939 CAN Frames and extract PGNs'
@@ -79,15 +95,17 @@ def parse_args():
 def main():
     args = parse_args()
 
+    # Convert single CAN Frame 
     if args.line:
         try:
             frame = J1939(args.line)
             frame.summary()
-            
+
         except ValueError as error:
             print(f'ERROR: {error}')
             sys.exit(1)
     
+    # Read a log file
     elif args.file:
         frames = parse_file(args.file)
         for frame in frames:
