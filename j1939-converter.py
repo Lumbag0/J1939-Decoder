@@ -1,7 +1,6 @@
 import argparse
 import sys
 import json
-from typing import List
 
 class J1939:
     # Can Frame
@@ -30,7 +29,6 @@ class J1939:
         
         self.can_id, self.can_data = id_and_data
 
-        
         # Convert the CAN Id to binary for later processing
         can_id_binary = self.__id_to_binary()
 
@@ -108,10 +106,13 @@ class J1939:
                 
                 value = self.decode_spn(self.can_data, spn_info)
                 units = spn_info.get('units', '')
+                
                 if value is not None:
-                    print(f'     {spn}: {name} -- {desc} = {value:}')
+                    print(f'     {spn}: {name} -- {desc} = {value:.2f} {units}')
+                
                 else:
                     print(f'     {spn}: {name} -- [DECODE ERROR]')
+            
             else:
                 print(f'     {spn}: No SPN Info')
 
