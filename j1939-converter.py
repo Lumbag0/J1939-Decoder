@@ -33,7 +33,7 @@ class J1939:
         
         # Convert the CAN Id to binary for later processing
         can_id_binary = self.__id_to_binary()
-        
+
         # Extract the fields from binary ID
         self.priority = int(can_id_binary[0:3], 2)
         self.reserved = int(can_id_binary[3], 2)
@@ -62,10 +62,21 @@ class J1939:
     # Description: Prints a summary of the information gathered
     # Parameters: N\A
     # Returns: N\A
-    def summary(self):
+    def summary(self, pgn_lookup: dict, spn_lookup: dict):
+        pgn_info = pgn_lookup.get(self.pgn)
+        
+        if pgn_info:
+            status = f'{pgn_info.get('parameterGroupLabel')} ({pgn_info.get('acronym')})'
+            spns = pgn_info.get('spnList', [])
+        
+        else:
+            status = 'Unknown PGN'
+            spns = []
+        
         print(f'\nCAN Frame: {self.can_frame}')
         print(f'Source Address: {self.source_address} (0x{self.source_address:X})')
         print(f'PGN: {self.pgn} (0x{self.pgn:X})')
+        print(f'Status: {status}')
         print("*" * 50)
         
         print(f'Priority: {self.priority}')
@@ -74,10 +85,40 @@ class J1939:
         print(f'PDU Format: {self.pdu_format} (0x{self.pdu_format:X})')
         print(f'PDU Specific: {self.pdu_specific} (0x{self.pdu_specific:X})\n')
 
+class Pgn:
+    pgn_file: str
+    pgn_data: dict
+
+    def __init__(self, pgn_file: str):
+        # Open file and convert to json object for processing
+        with open(pgn_file, 'r') as file:
+            self.pgn_data = json.load(file)
+    
+    # Description: Convert PGNs from Sstrings to integers, then filters out empty keys to avoid errors
+    # Parameters: N\A
+    # Returns: Dict
+    def build_pgn_lookup(self) -> dict:
+        return {int(key): value for key, value in self.pgn_data.items() if key.strip().isdigit()}
+
+class Spn:
+    spn_file: str
+    spn_data: dict
+
+    def __init__(self, spn_file: str):
+        # Open file and convert to json object for processing
+        with open(spn_file) as file:
+            self.spn_data = json.load(file)
+    
+    # Description: Converts SPNs from strings to integers
+    # Parameters: N\A
+    # Returns: Dict
+    def build_spn_lookup(self) -> dict:
+        return {int(key): value for key, value in self.spn_data.items() if key.strip().isdigit()}
+
+
 # Description: Parse command line arguments using ArgParse
 # Parameters: N\A
 # Returns: parse_args object
-
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description = 'Parse J1939 CAN Frames and extract the PGN'
@@ -119,11 +160,16 @@ def parse_log_file(file_path: str):
 
 def main():
     arguments = parse_arguments()
+    pgn_data = Pgn(r'pgns_and_spns_json/pgn_list.json')
+    spn_data = Spn(r'pgns_and_spns_json/spn_list.json')
+
+    pgn_lookup = pgn_data.build_pgn_lookup()
+    spn_lookup = spn_data.build_spn_lookup()
 
     if arguments.line:
         try:
             frame = J1939(arguments.line)
-            frame.summary()
+            frame.summary(pgn_lookup, spn_lookup)
 
         except ValueError as error:
             print(f'ERROR: {error}')
@@ -132,7 +178,7 @@ def main():
     elif arguments.file:
         frames = parse_log_file(arguments.file)
         for frame in frames:
-            frame.summary()
+            frame.summary(pgn_lookup, spn_lookup)
 
 
 if __name__ == '__main__':
