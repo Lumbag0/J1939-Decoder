@@ -85,6 +85,30 @@ class J1939:
         print(f'PDU Format: {self.pdu_format} (0x{self.pdu_format:X})')
         print(f'PDU Specific: {self.pdu_specific} (0x{self.pdu_specific:X})\n')
 
+        if spns:
+            self.__print_spns(spns, spn_lookup)
+        else:
+            print(f'No SPNs found for this PGN ({self.pgn}) in list')
+    
+    # Description: Print SPNs related to the PGN
+    # Parameters: spns (list), spn_lookup (dict)
+    # Returns: N\A
+    def __print_spns(self, spns: list, spn_lookup: dict):
+        print('SPNs:')
+        for spn in spns:
+            # Find data for current SPN
+            spn_info = spn_lookup.get(spn)
+            
+            if spn_info:
+                # Get Spn name (if it does not exist, set it to Unknown)
+                name = spn_info.get('spnName', 'Unknown')
+                
+                # Get Spn description (if it does not exist, set it to nothing)
+                desc = spn_info.get('spnDescription', '').split('\r\n')[0]
+                print(f'     {spn}: {name} - {desc}')
+            else:
+                print(f'     {spn}: No SPN Info')
+
 class Pgn:
     pgn_file: str
     pgn_data: dict
