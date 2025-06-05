@@ -60,7 +60,8 @@ class J1939:
     # Description: Prints a summary of the information gathered
     # Parameters: N\A
     # Returns: N\A
-    def summary(self, pgn_lookup: dict, spn_lookup: dict):
+    def summary(self, pgn_lookup: dict, spn_lookup: dict, output_file=None):
+        output_lines = []
         pgn_info = pgn_lookup.get(self.pgn)
         
         if pgn_info:
@@ -71,28 +72,39 @@ class J1939:
             status = 'Unknown PGN'
             spns = []
         
-        print(f'\nCAN Frame: {self.can_frame}')
-        print(f'Source Address: {self.source_address} (0x{self.source_address:X})')
-        print(f'PGN: {self.pgn} (0x{self.pgn:X})')
-        print(f'Status: {status}')
-        print("*" * 50)
+        output_lines.append(f'\nCAN Frame: {self.can_frame}')
+        output_lines.append(f'Source Address: {self.source_address} (0x{self.source_address:X})')
+        output_lines.append(f'PGN: {self.pgn} (0x{self.pgn:X})')
+        output_lines.append(f'Status: {status}')
+        output_lines.append("*" * 50)
         
-        print(f'Priority: {self.priority}')
-        print(f'Reserved: {self.reserved}')
-        print(f'Data Page: {self.data_page}')
-        print(f'PDU Format: {self.pdu_format} (0x{self.pdu_format:X})')
-        print(f'PDU Specific: {self.pdu_specific} (0x{self.pdu_specific:X})\n')
+        output_lines.append(f'Priority: {self.priority}')
+        output_lines.append(f'Reserved: {self.reserved}')
+        output_lines.append(f'Data Page: {self.data_page}')
+        output_lines.append(f'PDU Format: {self.pdu_format} (0x{self.pdu_format:X})')
+        output_lines.append(f'PDU Specific: {self.pdu_specific} (0x{self.pdu_specific:X})\n')
 
         if spns:
-            self.__print_spns(spns, spn_lookup)
+            output_lines.extend(self.__print_spns(spns, spn_lookup))
+        
         else:
-            print(f'No SPNs found for this PGN ({self.pgn}) in list')
-    
+            output_lines.append(f'No SPNs found for this PGN ({self.pgn}) in list')
+        
+        output_text = '\n'.join(output_lines)
+        print(output_text)
+        
+        
+        if output_file:
+            
+
+            with open(output_file, 'a') as file:
+                file.write(output_text + '\n')
+
     # Description: Print SPNs related to the PGN
     # Parameters: spns (list), spn_lookup (dict)
     # Returns: N\A
-    def __print_spns(self, spns: list, spn_lookup: dict):
-        print('SPNs:')
+    def __print_spns(self, spns: list, spn_lookup: dict) -> list:
+        lines = ['SPNs:']
         for spn in spns:
             # Find data for current SPN
             spn_info = spn_lookup.get(spn)
@@ -108,14 +120,15 @@ class J1939:
                 units = spn_info.get('units', '')
                 
                 if value is not None:
-                    print(f'     {spn}: {name} -- {desc} = {value:.2f} {units}')
+                    lines.append(f'     {spn}: {name} -- {desc} = {value:.2f} {units}')
                 
                 else:
-                    print(f'     {spn}: {name} -- [DECODE ERROR]')
+                    lines.append(f'     {spn}: {name} -- [DECODE ERROR]')
             
             else:
-                print(f'     {spn}: No SPN Info')
-
+                lines.append(f'     {spn}: No SPN Info')
+        
+        return lines
     # Description: Decodes the value of an SPN from the given bytes using the metadata
     # Parameters: can_data, spn_info dictionary
     # Returns: Float or None
@@ -204,6 +217,11 @@ def parse_arguments():
         help='Parse a J1939 candump formatted J1939 Log File'
     )
 
+    parser.add_argument(
+        '-o', '--output',
+        help="Write results to a file"
+    )
+
     return parser.parse_args()
 
 # Description: Parses a candump-style log file into J1939 Objects
@@ -236,10 +254,12 @@ def main():
     pgn_lookup = pgn_data.build_pgn_lookup()
     spn_lookup = spn_data.build_spn_lookup()
 
+    output_path = arguments.output
+
     if arguments.line:
         try:
             frame = J1939(arguments.line)
-            frame.summary(pgn_lookup, spn_lookup)
+            frame.summary(pgn_lookup, spn_lookup, output_file=output_path)
 
         except ValueError as error:
             print(f'ERROR: {error}')
@@ -248,7 +268,7 @@ def main():
     elif arguments.file:
         frames = parse_log_file(arguments.file)
         for frame in frames:
-            frame.summary(pgn_lookup, spn_lookup)
+            frame.summary(pgn_lookup, spn_lookup, output_file=output_path)
 
 
 if __name__ == '__main__':
