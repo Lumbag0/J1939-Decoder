@@ -105,9 +105,54 @@ class J1939:
                 
                 # Get Spn description (if it does not exist, set it to nothing)
                 desc = spn_info.get('spnDescription', '').split('\r\n')[0]
-                print(f'     {spn}: {name} - {desc}')
+                
+                value = self.decode_spn(self.can_data, spn_info)
+                units = spn_info.get('units', '')
+                if value is not None:
+                    print(f'     {spn}: {name} -- {desc} = {value:}')
+                else:
+                    print(f'     {spn}: {name} -- [DECODE ERROR]')
             else:
                 print(f'     {spn}: No SPN Info')
+
+    # Description: Decodes the value of an SPN from the given bytes using the metadata
+    # Parameters: can_data, spn_info dictionary
+    # Returns: Float or None
+    def decode_spn(self, can_data: str, spn_info: dict) -> float | None:
+        try:
+            # Convert Hex data to Byte Array
+            data_bytes = bytes.fromhex(can_data)
+
+            # Build bitstring
+            binary_str = ''.join(f'{byte:08b}' for byte in data_bytes)
+
+            # Get SPN Bit Start and Length
+            bit_start = int(spn_info.get('bitPositionStart', 0))
+            spn_length = int(spn_info.get('spnLength', 1))
+
+            # Ensure bit start and length does not overflow
+            if bit_start + spn_length > len(binary_str):
+                print(f'ERROR: SPN {spn_info.get('spnName', 'Unknown')} out of range')
+                return None
+
+            # Slice bits representing SPN
+            spn_bits = binary_str[bit_start:bit_start + spn_length]
+
+            # Convert string to integer
+            value = int(spn_bits, 2)
+
+            # Get Scaling and Offset
+            resolution_num = float(spn_info.get('resolutionNumerator', 1))
+            resolution_den = float(spn_info.get('resolutionDenominator', 1))
+            offset = float(spn_info.get('offset', 0.0))
+            scale = resolution_num / resolution_den
+
+            # return scaled value
+            return (value * scale) + offset
+        
+        except Exception as error:
+            print(f'ERROR: Failed to decode SPN: {error}')
+            return None
 
 class Pgn:
     pgn_file: str
