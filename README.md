@@ -1,5 +1,5 @@
 # J1939-Decoder
-J1939-Decoder is a Python script that takes a CAN Frame and parses through to obtain the PGN, SPNs, and tries to obtain the SPN data. 
+J1939-Decoder is a Python script that takes a CAN Frame or CAN Frame log and parses through to obtain the PGN, SPNs, and tries to obtain the SPN data. 
 J1939-Decoder uses the pgn and spn list JSON files found in LittleBlondeDevil's [TruckDevil](https://github.com/LittleBlondeDevil/TruckDevil) repository.
 
 ## Features
